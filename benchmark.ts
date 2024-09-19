@@ -25,5 +25,5 @@ export type BenchmarkTimingResult = {
 }
 
 export type IterationResult = {
-  timePerQuery: string[];
+  timePerQuery: number[];
 };

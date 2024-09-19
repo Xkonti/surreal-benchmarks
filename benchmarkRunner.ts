@@ -52,25 +52,42 @@ export async function runBenchmark(db: DatabaseDef, benchmark: BenchmarkDef): Pr
 }
 
 
-async function runQuery(conn: Surreal, query: QueryDef): Promise<string[]> {
+async function runQuery(conn: Surreal, query: QueryDef): Promise<number[]> {
   let results = await conn.query_raw(query.query);
   if (results.length == 0) {
     console.error("Query returned no results.");
     return [];
   }
 
-  let times: string[] = [];
+  let times: number[] = [];
 
   for (const result of results) {
     if (result.status == "ERR") {
       console.error("Query failed:", result);
-      times.push("ERR");
+      times.push(-1);
       continue;
     }
 
-    console.log("Query", query.name, "took", result.time, "ms");
-    times.push(result.time);
+    let timeNumber = toMs(result.time);
+    console.log("Query", query.name, "took", timeNumber, "ms");
+    times.push(timeNumber);
   }
 
   return times;
+}
+
+function toMs(time: string): number {
+  // If the time string ends with `ms`, remove it and return as a number
+  if (time.endsWith("µs")) {
+    return parseFloat(time.slice(0, -2)) / 1000;
+  }
+  else if (time.endsWith("ms")) {
+    return parseFloat(time.slice(0, -2));
+  }
+  else if (time.endsWith("s")) {
+    return parseFloat(time.slice(0, -1)) * 1000;
+  }
+  else {
+    throw new Error("Invalid time format (can't conver to ms): " + time);
+  }
 }

@@ -2,7 +2,19 @@
 
 A set of simple benchmarks of various aspects and versions of the SurrealDB database.
 
-## Deployment to test during the livestream
+## Stream #1 results
+
+Initial results come only from a single machine (Jabba) and were performed only with the following surrealdb versions:
+- SurrealDB 1.5.4 with the default RocksDB storage engine
+- SurrealDB 1.5.4 with the the in-memory storage engine
+- SurrealDB 2.0.1 with the RocksDB storage engine
+- SurrealDB 2.0.1 with the in-memory storage engine
+
+The SurrealKV (Beta) storage engine was not tested yet due to slow deletion performance.
+
+The results are available as a [PDF file here](docs/First%20stream%20results.pdf). Keep in mind that the results are only from a single machine and from 15 - 30 iterations that don't filter out any fluctuations.
+
+## Target deployment to test during the livestreams
 
 1. SurrealDB 1.5.4 with the default RocksDB storage engine
 2. SurrealDB 1.5.4 with the default RocksDB storage engine on RAM disk
@@ -15,8 +27,6 @@ A set of simple benchmarks of various aspects and versions of the SurrealDB data
 
 Each version will be deployed as a Docker container on this set of machines:
 1. Jabba - AMD Ryzen Embedded V1500B, DDR4 RAM, PCI Gen 3 SSD Cache assisted ZFS (NAS)
-
-(in the future)
 2. Homelander - Intel i9 12900K, DDR4 RAM, PCI Gen 4 SSD (PC)
 3. Translucent - Intel 11th gen Celeron N5105, DDR4 RAM, M.2 SATA3.2 SSD (Beelink U59 Pro)
 4. Vision - Intel Ultra 7 155H, DDR5 RAM, PCI Gen 4 SSD (Laptop)
