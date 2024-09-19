@@ -1,0 +1,17 @@
+{
+  "name": "surreal-benchmarks",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "start" : "bun index.ts"
+  },
+  "dependencies": {
+    "surrealdb": "1.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
