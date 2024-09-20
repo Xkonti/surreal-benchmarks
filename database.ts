@@ -14,11 +14,11 @@ export function genDBs(ip: string, serverName: string): DatabaseDef[] {
       ip,
       port: 14838,
     },
-    {
-      name: `${serverName}-surreal-1-rocksdb-ram`,
-      ip,
-      port: 14839,
-    },
+    // {
+    //   name: `${serverName}-surreal-1-rocksdb-ram`,
+    //   ip,
+    //   port: 14839,
+    // },
     {
       name: `${serverName}-surreal-1-memory`,
       ip,
@@ -29,16 +29,16 @@ export function genDBs(ip: string, serverName: string): DatabaseDef[] {
       ip,
       port: 14841,
     },
-    {
-      name: `${serverName}-surreal-2-rocksdb-ram`,
-      ip,
-      port: 14842,
-    },
-    {
-      name: `${serverName}-surreal-2-surrealkv-ram`,
-      ip,
-      port: 14844,
-    },
+    // {
+    //   name: `${serverName}-surreal-2-rocksdb-ram`,
+    //   ip,
+    //   port: 14842,
+    // },
+    // {
+    //   name: `${serverName}-surreal-2-surrealkv-ram`,
+    //   ip,
+    //   port: 14844,
+    // },
     {
       name: `${serverName}-surreal-2-memory`,
       ip,
