@@ -1,7 +1,6 @@
-import { firstOneSchemaless, firstOneSchemafull, firstOneWithIndex } from "./benchmarks/first_one";
+import { firstOneSchemaless, firstOneSchemafull } from "./benchmarks/first_one";
 
 export const benchmarksList = [
-  // firstOneSchemaless,
-  // firstOneSchemafull,
-  firstOneWithIndex
+  firstOneSchemaless,
+  firstOneSchemafull,
 ]

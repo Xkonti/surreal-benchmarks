@@ -1,7 +1,7 @@
 import type { BenchmarkTimingResult } from "./benchmark";
 
-export function writeToCSV(benchmarkName: string, databaseName: string, results: BenchmarkTimingResult, outputDir: string) {
-  const file = Bun.file(`${outputDir}/${benchmarkName}-${databaseName}.csv`, );
+export function writeToCSV(databaseName: string, benchmarkName: string, postfix: string, results: BenchmarkTimingResult, outputDir: string) {
+  const file = Bun.file(`${outputDir}/${databaseName}-${benchmarkName}${postfix}.csv`, );
   // Bun.write(file, "Hello?", { createPath: true });
   const writer = file.writer();
 
