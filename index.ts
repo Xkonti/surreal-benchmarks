@@ -6,6 +6,7 @@ import { processResults } from "./resultsProcessor";
 import type { BenchmarkDef } from "./benchmark";
 import { firstOneSchemaless, firstOneSchemafull } from "./benchmarks/first_one";
 import { tombstonesBenchmark } from "./benchmarks/tombstones";
+import { mixSeeds } from "./utils";
 
 console.log("Hello via Bun!");
 
@@ -58,12 +59,19 @@ const plans: Plan[] = [
   },
 ];
 
-async function runPlan(plan: Plan) {
-  for (const db of plan.dbs) {
-    for (const benchmark of plan.benchmarks) {
+async function runPlan(plan: Plan, seed: number) {
+  for (let dbIndex = 0; dbIndex < plan.dbs.length; dbIndex++) {
+    const db = plan.dbs[dbIndex];
+    const dbSeed = mixSeeds(seed, dbIndex);
+
+    for (let benchIndex = 0; benchIndex < plan.benchmarks.length; benchIndex++) {
+      const benchmark = plan.benchmarks[benchIndex];
+      const benchmarkSeed = mixSeeds(dbSeed, benchIndex);
+
       console.log(db.name, " - Starting benchmark", benchmark.name);
-      let results = await runBenchmark(db, benchmark);
+      let results = await runBenchmark(db, benchmark, benchmarkSeed);
       console.log(db.name, " - Finished benchmark", benchmark.name);
+
       // Save raw data to a CSV file
       writeToCSV(db.name, benchmark.name, "-raw", results, outputDir);
       let processedResults = processResults(results);
@@ -74,8 +82,9 @@ async function runPlan(plan: Plan) {
 }
 
 let tasks: Promise<void>[] = [];
-for (const plan of plans) {
-  tasks.push(runPlan(plan));
+for (let planIndex = 0; planIndex < plans.length; planIndex++) {
+  const plan = plans[planIndex];
+  tasks.push(runPlan(plan, planIndex));
 }
 
 await Promise.all(tasks);

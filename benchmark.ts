@@ -17,7 +17,7 @@ export type BenchmarkDef = {
 
 export type QueryDef = {
   name: string;
-  query: string;
+  query: string | ((seed: number) => Generator<string>);
 };
 
 export type BenchmarkTimingResult = {

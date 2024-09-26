@@ -6,7 +6,8 @@
     "start" : "bun index.ts"
   },
   "dependencies": {
-    "surrealdb": "1.0.0"
+    "surrealdb": "1.0.0",
+    "chance": "1.1.12"
   },
   "devDependencies": {
     "@types/bun": "latest"
