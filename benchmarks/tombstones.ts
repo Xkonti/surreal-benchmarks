@@ -6,7 +6,7 @@ const recordsPerRepetition = 5000;
 /**
  * This benchmark measures how the performance degrades when a lot of records are being created and deleted repeatedly.
  */
-export const tombsontesBenchmark: BenchmarkDef = {
+export const tombstonesBenchmark: BenchmarkDef = {
   name: "tombstones",
   namespace: "tombstones",
   queries: genCreateQueries(),

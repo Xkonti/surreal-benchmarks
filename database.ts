@@ -14,11 +14,6 @@ export function genDBs(ip: string, serverName: string): DatabaseDef[] {
       ip,
       port: 14838,
     },
-    // {
-    //   name: `${serverName}-surreal-1-rocksdb-ram`,
-    //   ip,
-    //   port: 14839,
-    // },
     {
       name: `${serverName}-surreal-1-memory`,
       ip,
@@ -29,16 +24,6 @@ export function genDBs(ip: string, serverName: string): DatabaseDef[] {
       ip,
       port: 14841,
     },
-    // {
-    //   name: `${serverName}-surreal-2-rocksdb-ram`,
-    //   ip,
-    //   port: 14842,
-    // },
-    // {
-    //   name: `${serverName}-surreal-2-surrealkv-ram`,
-    //   ip,
-    //   port: 14844,
-    // },
     {
       name: `${serverName}-surreal-2-memory`,
       ip,
@@ -52,10 +37,7 @@ export function genDBs(ip: string, serverName: string): DatabaseDef[] {
   ];
 }
 
-export const databases: DatabaseDef[] = [
-  ...genDBs("jabba.lan", "jabba"),
-  ...genDBs("translucent.lan", "translucent"),
-  ...genDBs("vision.lan", "vision"),
-  ...genDBs("homelander.lan", "homelander"),
-];
-
+export const jabbaSet = genDBs("jabba.lan", "jabba");
+export const translucentSet = genDBs("translucent.lan", "translucent");
+export const visionSet = genDBs("vision.lan", "vision");
+export const homelanderSet = genDBs("homelander.lan", "homelander");
