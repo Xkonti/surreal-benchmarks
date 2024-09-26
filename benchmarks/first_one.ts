@@ -21,6 +21,10 @@ export const cleanupQuery: QueryDef = {
 export const firstOneSchemaless: BenchmarkDef = {
   name: "first_one_schemaless",
   namespace: "firstoneschemaless",
+  benchmarkSetupQueries: [],
+  benchmarkTeardownQueries: [],
+  iterationSetupQueries: [],
+  iterationTeardownQueries: [],
   queries: [
     {
       name: "define table",
@@ -36,6 +40,10 @@ export const firstOneSchemaless: BenchmarkDef = {
 export const firstOneSchemafull: BenchmarkDef = {
   name: "first_one_schemafull",
   namespace: "firstoneschemafull",
+  benchmarkSetupQueries: [],
+  benchmarkTeardownQueries: [],
+  iterationSetupQueries: [],
+  iterationTeardownQueries: [],
   queries: [
     {
       name: "define table",

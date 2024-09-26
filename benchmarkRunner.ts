@@ -1,17 +1,20 @@
 import Surreal from "surrealdb";
 import { sharedPassword, sharedUsername, type DatabaseDef } from "./database";
-import type { BenchmarkDef, QueryDef, IterationResult, BenchmarkTimingResult } from "./benchmark";
+import { type BenchmarkDef, type QueryDef, type IterationResult, type BenchmarkTimingResult, getIterable } from "./benchmark";
 import { mixSeeds } from "./utils";
 
+export const initialSeed = 154871;
 
-export async function runBenchmark(db: DatabaseDef, benchmark: BenchmarkDef, seed: number): Promise<BenchmarkTimingResult> {
+export async function runBenchmark(db: DatabaseDef, benchmark: BenchmarkDef): Promise<BenchmarkTimingResult> {
+  let isBenchmarkSetup = false;
+  
   let benchmarkResults: BenchmarkTimingResult = {
     iterationResults: []
   };
 
   // Run each query from the benchmark
   for (const iteration of Array(benchmark.iterations).keys()) {
-    const iterationSeed = mixSeeds(seed, iteration);
+    const iterationSeed = mixSeeds(initialSeed, iteration);
     console.log("Running iteration", iteration);
 
     // Create a new connection
@@ -32,6 +35,23 @@ export async function runBenchmark(db: DatabaseDef, benchmark: BenchmarkDef, see
       throw err;
     }
 
+    // Run the benchmark setup queries if not already done
+    if (!isBenchmarkSetup) {
+      for (let benchmarkSetupIndex = 0; benchmarkSetupIndex < benchmark.benchmarkSetupQueries.length; benchmarkSetupIndex++) {
+        const query = benchmark.benchmarkSetupQueries[benchmarkSetupIndex];
+        const querySeed = mixSeeds(iterationSeed, benchmarkSetupIndex);
+        await runUtilityQuery(database, query, querySeed);
+      }
+      isBenchmarkSetup = true;
+    }
+
+    // Run the iteration setup queries
+    for (let iterationSetupIndex = 0; iterationSetupIndex < benchmark.iterationSetupQueries.length; iterationSetupIndex++) {
+      const query = benchmark.iterationSetupQueries[iterationSetupIndex];
+      const querySeed = mixSeeds(iterationSeed, iterationSetupIndex);
+      await runUtilityQuery(database, query, querySeed);
+    }
+
     let iterationResults: IterationResult = {
       timePerQuery: []
     }
@@ -50,6 +70,22 @@ export async function runBenchmark(db: DatabaseDef, benchmark: BenchmarkDef, see
       iterationResults.timePerQuery.push(...times);
     }
 
+    // Run the iteration teardown queries
+    for (let iterationTeardownIndex = 0; iterationTeardownIndex < benchmark.iterationTeardownQueries.length; iterationTeardownIndex++) {
+      const query = benchmark.iterationTeardownQueries[iterationTeardownIndex];
+      const querySeed = mixSeeds(iterationSeed, iterationTeardownIndex);
+      await runUtilityQuery(database, query, querySeed);
+    }
+
+    // Run the benchmark teardown queries if this is the last iteration
+    if (iteration == benchmark.iterations - 1) {
+      for (let benchmarkTeardownIndex = 0; benchmarkTeardownIndex < benchmark.benchmarkTeardownQueries.length; benchmarkTeardownIndex++) {
+        const query = benchmark.benchmarkTeardownQueries[benchmarkTeardownIndex];
+        const querySeed = mixSeeds(iterationSeed, benchmarkTeardownIndex);
+        await runUtilityQuery(database, query, querySeed);
+      }
+    }
+
     await database.close();
     benchmarkResults.iterationResults.push(iterationResults);
   }
@@ -57,14 +93,19 @@ export async function runBenchmark(db: DatabaseDef, benchmark: BenchmarkDef, see
   return benchmarkResults;
 }
 
+/// Runs a query which doesn't keep track of time nor return results
+async function runUtilityQuery(conn: Surreal, query: QueryDef, seed: number): Promise<void> {
+  let queries = getIterable(query, seed);
+  for await (const queryString of queries) {
+    await conn.query_raw(queryString);
+  }
+}
 
 async function runQuery(conn: Surreal, query: QueryDef, seed: number): Promise<number[]> {
-  let queries = typeof query.query === "string"
-    ? [query.query]
-    : query.query(seed);
+  let queries = getIterable(query, seed);
   let times: number[] = [];
 
-  for (const queryString of queries) {
+  for await (const queryString of queries) {
     let results = await conn.query_raw(queryString);
     if (results.length == 0) {
       console.error("Query returned no results.");

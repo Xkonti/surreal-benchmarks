@@ -1,6 +1,10 @@
 export type BenchmarkDef = {
   name: string;
   namespace: string;
+  benchmarkSetupQueries: QueryDef[];
+  benchmarkTeardownQueries: QueryDef[];
+  iterationSetupQueries: QueryDef[];
+  iterationTeardownQueries: QueryDef[];
   queries: QueryDef[];
 
   /**
@@ -17,8 +21,15 @@ export type BenchmarkDef = {
 
 export type QueryDef = {
   name: string;
-  query: string | ((seed: number) => Generator<string>);
+  query: string | ((seed: number) => AsyncGenerator<string>);
 };
+
+export function getIterable(query: QueryDef, seed: number): string[] | AsyncGenerator<string> {
+  if (typeof query.query === "string") {
+    return [query.query];
+  }
+  return query.query(seed);
+}
 
 export type BenchmarkTimingResult = {
   iterationResults: IterationResult[];

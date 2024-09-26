@@ -9,7 +9,14 @@ const recordsPerRepetition = 5000;
 export const tombstonesBenchmark: BenchmarkDef = {
   name: "tombstones",
   namespace: "tombstones",
-  queries: genCreateQueries(),
+  benchmarkSetupQueries: [],
+  benchmarkTeardownQueries: [],
+  iterationSetupQueries: [],
+  iterationTeardownQueries: [],
+  queries: [{
+    name: "create and delete records",
+    query: genCreateQueries,
+  }],
   iterations: 1,
   numberOfConnections: 1,
 };
@@ -17,16 +24,12 @@ export const tombstonesBenchmark: BenchmarkDef = {
 /**
  * Generates the queries to create and delete the records repetitively.
  */
-function genCreateQueries(): QueryDef[] {
-  let queries: QueryDef[] = [];
+async function* genCreateQueries(seed: number): AsyncGenerator<string> {
+  // Ignoring the seed as it's not necessary for this benchmark
   for (let i = 0; i < repetitions; i++) {
-    queries.push({
-      name: `repetition ${i}`,
-      query: /**surql**/`
+    yield /**surql**/`
         CREATE |testtombstones:${recordsPerRepetition}| SET numberA = rand::int(-10000, 10000), stringA = "Hello there!", objectA = {"a": 1, "b": "2", "c": 3.1415} RETURN NULL;
         DELETE testtombstones;
-        `,
-    });
+        `;
   }
-  return queries;
 }
