@@ -131,9 +131,34 @@ is_admin = ${isAdmin}
 RETURN NULL;`
   }
 
+  // GENERATE POSTS
+  const postsCount = 300;
+  const postIds: string[] = [];
+  for (let i = 0; i < postsCount; i++) {
+    const id = `post:⟨${chance.guid()}⟩`;
+    postIds.push(id);
+    const authors = chance.pickset(userIds, chance.natural({min: 1, max: 4}));
+    const title = chance.sentence();
+    const content = chance.paragraph();
+    const publishedAt = chance.date().toISOString();
+    const deletedAt = chance.bool({likelihood: 5})
+      ? chance.date().toISOString()
+      : null;
+    const likes = chance.integer({min: 0, max: 500});
+    yield /**surql**/`CREATE ${id} SET
+authors = ${'[' + authors.join(', ') + ']'},
+title = "${title}",
+content = "${content}",
+publishedAt = d"${publishedAt}",
+deletedAt = ${deletedAt == null ? "NONE" : 'd"' + deletedAt + '"'},
+likes = ${likes}
+RETURN NULL;`
+  }
+
   // GENERATE COMMENTS
   const commentsCount = 100000;
   let rootCommentIds: string[] = [];
+  let postIdByCommentId: Record<string, string> = {};
   for (let i = 0; i < commentsCount; i++) {
     const id = `comment:⟨${chance.guid()}⟩`;
     const author = chance.pickone(userIds);
@@ -147,7 +172,13 @@ RETURN NULL;`
     const responseTo = chance.bool({likelihood: 75}) && rootCommentIds.length > 0
       ? chance.pickone(rootCommentIds)
       : null;
+    const postId = responseTo == null
+      ? chance.pickone(postIds)
+      : postIdByCommentId[responseTo];
     const approved = chance.bool({likelihood: 50});
+
+    // Register the relationship between the comment and the post
+    postIdByCommentId[id] = postId;
 
     // Allow only some comments to have a response
     if (chance.bool({likelihood: 5})) {
@@ -161,6 +192,7 @@ createdAt = d"${createdAt}",
 updatedAt = d"${updatedAt}",
 deletedAt = ${deletedAt == null ? "NONE" : 'd"' + deletedAt + '"'},
 likes = ${likes},
+post = ${postId},
 responseTo = ${responseTo == null ? "NONE" : responseTo},
 approved = ${approved}
 RETURN NULL;`
