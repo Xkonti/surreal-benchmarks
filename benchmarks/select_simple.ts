@@ -41,7 +41,9 @@ export const selectSimpleBenchmark: BenchmarkDef = {
   benchmarkTeardownQueries: [teardownQuery],
   iterationSetupQueries: [],
   iterationTeardownQueries: [],
-  queries: [{
+  // queries: [],
+  queries: [
+  {
     name: "select slightly invalid",
     query: /**surql**/`
       SELECT id FROM comment WHERE deletedAt IS NOT NONE AND deletedAt < createdAt;`,
@@ -62,20 +64,84 @@ export const selectSimpleBenchmark: BenchmarkDef = {
       SELECT author.id, author.name, author.email FROM comment WHERE deletedAt IS NOT NONE AND deletedAt < createdAt AND updatedAt < createdAt AND author.is_admin;`,
   },
   {
-    name: "admin's with 400+ likes",
+    name: "admin's with 20+ likes",
     query: /**surql**/`
-      SELECT id FROM comment WHERE author.is_admin AND likes >= 400;`,
+      SELECT id FROM comment WHERE author.is_admin AND array::len(array::flatten(SELECT VALUE <-likes FROM $parent)) >= 20;`,
   },
   {
-    name: "admin's approved with 400+ likes",
+    name: "admin's approved with 20+ likes",
     query: /**surql**/`
-      SELECT id FROM comment WHERE author.is_admin AND likes >= 400 AND approved;`,
+      SELECT id FROM comment WHERE author.is_admin AND approved AND array::len(array::flatten(SELECT VALUE <-likes FROM $parent)) >= 20;`,
   },
   {
-    name: "admin's approved with 400+ likes, older",
+    name: "admin's approved with 20+ likes, older",
     query: /**surql**/`
-      SELECT id FROM comment WHERE author.is_admin AND likes >= 400 AND approved AND createdAt < author.createdAt;`,
+      SELECT id FROM comment WHERE author.is_admin AND approved AND createdAt < author.createdAt AND array::len(array::flatten(SELECT VALUE <-likes FROM $parent)) >= 20;`,
   },
+  {
+    name: "count admins",
+    query: /**surql**/`
+      SELECT count() FROM user WHERE is_admin GROUP ALL;`,
+  },
+  {
+    name: "count admins' post likes",
+    query: /**surql**/`
+      RETURN array::len(array::flatten((SELECT VALUE ->likes->post FROM (SELECT VALUE id from user WHERE is_admin))));`,
+  },
+  {
+    name: "count admins' comment likes",
+    query: /**surql**/`
+      RETURN array::len(array::flatten((SELECT VALUE ->likes->comment FROM (SELECT VALUE id from user WHERE is_admin))));`,
+  },
+  {
+    name: "posts where all authors are admins",
+    query: /**surql**/`
+      SELECT id, authors FROM post WHERE array::len(SELECT value id FROM $parent.authors WHERE is_admin) == array::len(authors);`,
+  },
+  {
+    name: "comments created after deletion and left on posts published after deletion",
+    query: /**surql**/`
+      SELECT * FROM comment WHERE !!deletedAt AND createdAt > deletedAt AND !!(post.deletedAt) AND post.publishedAt > post.deletedAt;`,
+  },
+  {
+    name: "comments created after deletion and left on posts non-deleted posts with more than 200 likes #1",
+    query: /**surql**/`
+LET $comments = (SELECT * FROM comment WHERE !!deletedAt AND createdAt > deletedAt AND !(post.deletedAt));
+SELECT * FROM $comments WHERE array::len(array::flatten(SELECT VALUE <-likes FROM $parent.post)) > 200;`,
+  },
+  {
+    name: "comments created after deletion and left on posts non-deleted posts with more than 200 likes #2",
+    query: /**surql**/`
+LET $posts = (SELECT VALUE id FROM post WHERE !deletedAt AND array::len(array::flatten(SELECT VALUE <-likes FROM $parent)) > 200);
+SELECT * FROM comment WHERE !!deletedAt AND createdAt > deletedAt AND post INSIDE $posts;`,
+  },
+  {
+    name: "posts that have nested comments - unoptimized",
+    query: /**surql**/`
+LET $comments = (SELECT VALUE post FROM comment WHERE !!responseTo);
+SELECT * FROM post WHERE (SELECT count() FROM $comments WHERE post = $parent.id GROUP ALL)[0].count;`,
+  },
+  {
+    name: "posts that have nested comments - optimized",
+    query: /**surql**/`
+      RETURN array::distinct(SELECT VALUE post FROM comment WHERE !!responseTo).*;`,
+  },
+  {
+    name: "how many comments each post has - where and count",
+    query: /**surql**/`
+      SELECT id, (SELECT count() FROM comment WHERE post = $parent GROUP ALL)[0].count as count FROM post;`,
+  },
+  // { // array::filter is 2.x only
+  //   name: "how many comments each post has - filter and len",
+  //   query: /**surql**/`
+  //     SELECT id, (array::len(array::filter((SELECT VALUE post FROM comment), $parent))) as count FROM post;`,
+  // },
+  {
+    name: "how many comments each post has - group by",
+    query: /**surql**/`
+      SELECT post, count(post) FROM comment GROUP BY post;`,
+  },
+  
   // {
   //   name: "find unapproved comments that are replies to other some user's comments",
   //   // TODO: Compare single query vs multiple step query performance
@@ -128,7 +194,7 @@ name = "${name}",
 email = "${email}",
 createdAt = d"${createdAt}",
 is_admin = ${isAdmin}
-RETURN NULL;`
+RETURN NONE;`
   }
 
   // GENERATE POSTS
@@ -144,15 +210,18 @@ RETURN NULL;`
     const deletedAt = chance.bool({likelihood: 5})
       ? chance.date().toISOString()
       : null;
-    const likes = chance.integer({min: 0, max: 500});
     yield /**surql**/`CREATE ${id} SET
 authors = ${'[' + authors.join(', ') + ']'},
 title = "${title}",
 content = "${content}",
 publishedAt = d"${publishedAt}",
-deletedAt = ${deletedAt == null ? "NONE" : 'd"' + deletedAt + '"'},
-likes = ${likes}
-RETURN NULL;`
+deletedAt = ${deletedAt == null ? "NONE" : 'd"' + deletedAt + '"'}
+RETURN NONE;`
+
+    // Generate likes for posts
+    const likesCount = chance.natural({min: 0, max: 500});
+    const likingUsers = chance.pickset(userIds, likesCount);
+    yield /**surql**/`RELATE [${likingUsers.join(', ')}]->likes->${id} RETURN NONE;`
   }
 
   // GENERATE COMMENTS
@@ -168,7 +237,6 @@ RETURN NULL;`
     const deletedAt = chance.bool({likelihood: 3})
       ? chance.date().toISOString()
       : null;
-    const likes = chance.integer({min: 0, max: 500});
     const responseTo = chance.bool({likelihood: 75}) && rootCommentIds.length > 0
       ? chance.pickone(rootCommentIds)
       : null;
@@ -191,11 +259,15 @@ content = "${content}",
 createdAt = d"${createdAt}",
 updatedAt = d"${updatedAt}",
 deletedAt = ${deletedAt == null ? "NONE" : 'd"' + deletedAt + '"'},
-likes = ${likes},
 post = ${postId},
 responseTo = ${responseTo == null ? "NONE" : responseTo},
 approved = ${approved}
-RETURN NULL;`
+RETURN NONE;`
+
+    // Generate likes for comment
+    const likesCount = chance.natural({min: 0, max: 30});
+    const likingUsers = chance.pickset(userIds, likesCount);
+    yield /**surql**/`RELATE [${likingUsers.join(', ')}]->likes->${id} RETURN NONE;`
   }
 }
 
